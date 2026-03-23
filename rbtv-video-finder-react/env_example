@@ -1,0 +1,2 @@
+# Replace the URL with your Cloudflare Worker API endpoint.
+NEXT_PUBLIC_SITE_URL = "https://my-cloudflare-worker.workers.dev"
