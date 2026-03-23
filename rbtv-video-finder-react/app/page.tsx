@@ -100,18 +100,101 @@ function SearchContent() {
               currentResultsMap.set(item.id, item);
             }
           });
+          
+          const getStem = (word: string): string => {
+            const cleanWord = word.toLowerCase().trim();
 
-          const sorted = Array.from(currentResultsMap.values()).sort((a, b) => {
-            const getScore = (v: VideoResult) => {
-              const t = (v.title || "").toLowerCase();
-              if (t.startsWith(lowQuery)) return 3;
-              if (t.includes(lowQuery)) return 2;
-              return 0;
-            };
+            return cleanWord.replace(
+              /(?:[aeiouy]ing|ed|es|s|er|ment|ando|endo|ar|ir|or|ez|amente|amente|zioni|tion|cion)$/i,
+              ''
+            );
+          };
+
+          const getLevDistance = (a: string, b: string): number => {
+            const an = a.length;
+            const bn = b.length;
+            if (an === 0) return bn;
+            if (bn === 0) return an;
+
+            const matrix: number[][] = Array.from({ length: an + 1 }, (_, i) => 
+              Array.from({ length: bn + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+            );
+
+            for (let i = 1; i <= an; i++) {
+              for (let j = 1; j <= bn; j++) {
+                const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                matrix[i][j] = Math.min(
+                  matrix[i - 1][j] + 1,
+                  matrix[i][j - 1] + 1,
+                  matrix[i - 1][j - 1] + cost
+                );
+              }
+            }
+            return matrix[an][bn];
+          };
+
+          const sorted = Array.from(currentResultsMap.values()).sort((a: VideoResult, b: VideoResult) => {
+            const getScore = (v: VideoResult): number => {
+            const title = (v.title || "").toLowerCase();
+            const sub = (v.subheading || "").toLowerCase();
+            const queryWords = lowQuery.trim().split(/\s+/).filter(Boolean);
+            
+            if (queryWords.length === 0) return 0;
+
+            let totalScore = 0;
+
+            queryWords.forEach((qWord) => {
+              const qStem = getStem(qWord);
+              
+              const getBestMatchInField = (textField: string): number => {
+                const words = textField.split(/\s+/);
+                let bestFieldScore = 0;
+
+                words.forEach((tWord) => {
+                  const tLower = tWord.toLowerCase().replace(/[^a-z0-9]/g, "");
+                  const tStem = getStem(tLower);
+                  let currentWordScore = 0;
+
+                  if (tLower === qWord) {
+                    currentWordScore = 100;
+                  } else if (tStem === qStem && qStem.length > 2) {
+                    currentWordScore = 80;
+                  } else if (qWord.length > 3) {
+                    const distance = getLevDistance(qWord, tLower);
+                    if (distance === 1) currentWordScore = 40; 
+                    else if (distance === 2 && qWord.length > 5) currentWordScore = 15;
+                  }
+                  
+                  bestFieldScore = Math.max(bestFieldScore, currentWordScore);
+                });
+                return bestFieldScore;
+              };
+
+              const titleScore = getBestMatchInField(title);
+              const subScore = getBestMatchInField(sub);
+
+              const wordMaxScore = Math.max(titleScore * 1.2, subScore);
+              
+              totalScore += wordMaxScore;
+            });
+
+            return totalScore;
+          };
+
             const scoreA = getScore(a);
             const scoreB = getScore(b);
-            if (scoreA !== scoreB) return scoreB - scoreA;
-            return (parseInt(b.year || "0")) - (parseInt(a.year || "0"));
+
+            if (scoreA !== scoreB) {
+              return scoreB - scoreA;
+            }
+
+            if (a.priority !== b.priority) {
+              return (a.priority ?? 3) - (b.priority ?? 3);
+            }
+
+            const yearA = parseInt(a.year || "0", 10);
+            const yearB = parseInt(b.year || "0", 10);
+            return yearB - yearA;
           });
 
           setResults([...sorted]);
@@ -179,7 +262,7 @@ function SearchContent() {
     };
   }, [searchParams, performSearch]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: React.SyntheticEvent<HTMLFormElement, SubmitEvent>) => {
     e.preventDefault();
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return;
@@ -256,9 +339,22 @@ function SearchContent() {
       <div className="row justify-content-center">
         <div className="col-12 col-md-10 col-lg-8">
           <div className="text-center mb-5">
-            <h1 className="display-5 fw-bold text-dark" style={{ cursor: 'pointer' }} onClick={() => router.push('/')}>
-              RBTV Video Finder
-            </h1>
+            <h1 
+                className="display-5 fw-bold text-dark" 
+                style={{ cursor: 'pointer' }} 
+                onClick={() => {
+                  if (abortControllerRef.current) abortControllerRef.current.abort();
+                  
+                  setQuery('');
+                  setResults([]);
+                  setError(null);
+                  setProgress(0);
+
+                  router.push('/?q=');
+                }}
+              >
+                RBTV Video Finder
+              </h1>
             <p className="text-muted">Find your favorite adrenaline-filled clips</p>
           </div>
 
@@ -310,7 +406,7 @@ function SearchContent() {
                         Open Page
                       </a>
                       <button 
-                        className={`btn btn-sm ${copiedId === video.id ? 'btn-success' : 'btn-outline-primary'}`}
+                        className={`btn btn-sm ${copiedId === video.id ? 'btn-primary' : 'btn-outline-primary'}`}
                         onClick={() => handleGetLink(video.id)}
                         disabled={fetchingId === video.id}
                       >

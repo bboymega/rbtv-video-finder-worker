@@ -41,7 +41,11 @@ const log_info = (msg) => console.log(`[${new Date().toISOString()}] "INFO: ${ms
 function get_locale_priority(ll) {
     if (ll === 'en_INT') return 0;
     if (ll.startsWith('en_')) return 1;
-    return 2;
+    const romanLocales = ['fr_', 'de_', 'es_', 'it_', 'nl_', 'pt_', 'pl_'];
+    if (romanLocales.some(prefix => ll.startsWith(prefix))) {
+        return 2;
+    }
+    return 3;
 }
 
 export default {
