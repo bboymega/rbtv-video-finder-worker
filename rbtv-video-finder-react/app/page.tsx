@@ -413,9 +413,14 @@ function SearchContent() {
                         <FontAwesomeIcon icon={fetchingId === video.id ? faCircleNotch : (copiedId === video.id ? faCheck : faLink)} spin={fetchingId === video.id} className="me-1" />
                         Copy M3U
                       </button>
-                      <button className="btn btn-sm btn-outline-dark" onClick={() => window.open(`/redirect?id=${video.id}`, '_blank')}>
+                      <a
+                        href={`/redirect?id=${video.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-sm btn-outline-dark"
+                      >
                         <FontAwesomeIcon icon={faPlay} className="me-1" /> Watch Clip
-                      </button>
+                      </a>
                     </div>
                   </div>
                 </div>
