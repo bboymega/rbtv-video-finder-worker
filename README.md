@@ -24,6 +24,7 @@ git clone https://github.com/bboymega/rbtv-video-finder-worker
 2. Compile react project
 ```
 cd rbtv-video-finder-react
+echo "NEXT_PUBLIC_SITE_URL=\"https://your-cloudflare-worker.workers.dev\"" > .env
 npm install
 npm run build
 ```

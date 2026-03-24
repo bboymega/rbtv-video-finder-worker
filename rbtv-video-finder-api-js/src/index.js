@@ -111,7 +111,7 @@ async function fetch_category_recursive(base_url, cat, q) {
     let all_cards = [];
     let offset = 0;
     const page_size = 15;
-    while (offset < 75) {
+    while (offset <= 120) {
         const url = `${base_url}/${cat}?offset=${offset}&q=${encodeURIComponent(q)}`;
         try {
             const resp = await fetch(url, { headers });
@@ -170,7 +170,6 @@ async function get_video_from_id(video_id) {
     const api = `https://tv-api.redbull.com/products/dynamic/v5.1/rbtv/en/int/${video_id}`;
     const resp = await fetch(api, { headers });
     let stream_id = null;
-    let locale = "int";
 
     if (resp.ok) {
         const data = await resp.json();
@@ -178,14 +177,14 @@ async function get_video_from_id(video_id) {
     }
     
     if (stream_id) {
-        const v_api = `https://play.redbull.com/init/v1/rbtv/en/${locale}/personal_computer/http/${stream_id}`;
+        const v_api = `https://play.redbull.com/init/v1/rbtv/en/int/personal_computer/http/${stream_id}`;
         const v_res = await fetch(v_api, { headers });
         if (v_res.ok) {
             const v_data = await v_res.json();
             return [v_data.manifest_url, stream_id];
         }
     }
-    return [null, null, null];
+    return [null, null];
 }
 
 async function get_title_from_url(base_url_init, start = 0, end = null) {
@@ -211,7 +210,7 @@ async function get_title_from_url(base_url_init, start = 0, end = null) {
 
     if (video_id) {
         try {
-            let [video_url, locale, stream_id] = await get_video_from_id(video_id);
+            let [video_url, stream_id] = await get_video_from_id(video_id);
 
             if (!stream_id) {
                 const scan_locales = locale_list.slice(start, actual_end);
@@ -223,8 +222,7 @@ async function get_title_from_url(base_url_init, start = 0, end = null) {
                             const data = await r.json();
                             if (data.links?.[0]?.id) {
                                 stream_id = data.links[0].id;
-                                locale = loc;
-                                const v_api = `https://play.redbull.com/init/v1/rbtv/en/${locale}/personal_computer/http/${stream_id}`;
+                                const v_api = `https://play.redbull.com/init/v1/rbtv/en/${loc}/personal_computer/http/${stream_id}`;
                                 const v_res = await fetch(v_api, { headers });
                                 if (v_res.ok) {
                                     const v_data = await v_res.json();

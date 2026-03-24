@@ -134,7 +134,7 @@ async def fetch_category_recursive(base_url, cat, q):
             if len(cards) < page_size:
                 break
             offset += page_size
-            if offset >= 75:
+            if offset > 120:
                 break
         except Exception as e:
             log_error(f"Pagination error for {cat} at offset {offset}: {e}")
